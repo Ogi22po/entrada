@@ -1,0 +1,56 @@
+{
+  "Name": "Staging-to-DWH-Migrator",
+  "ReleaseLabel": "emr-5.23.0",
+  "LogUri": "s3://{bucket}/logs/staging-to-dwh_{date}",
+  "JobFlowRole": "{env[EMR_EC2_DefaultRole]}",
+  "ServiceRole": "{env[EMR_DefaultRole]}",
+  "VisibleToAllUsers": true,
+  "EbsRootVolumeSize": 30,
+  "Instances": {
+    "KeepJobFlowAliveWhenNoSteps": false,
+    "InstanceGroups": [
+      {
+        "Name": "Master",
+        "Market": "ON_DEMAND",
+        "InstanceRole": "MASTER",
+        "InstanceType": "m5.xlarge",
+        "InstanceCount": 1,
+        "Configurations": []
+      }
+    ]
+  },
+  "Applications": [
+    {
+      "Name": "Hadoop"
+    },
+    {
+      "Name": "Hive"
+    }
+  ],
+  "Configurations": [
+    {
+      "Classification": "hive-site",
+      "Properties": {
+        "hive.metastore.client.factory.class": "com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory"
+      }
+    }
+  ],
+  "Steps": [
+    {
+      "Name": "DNS data migration",
+      "ActionOnFailure": "TERMINATE_CLUSTER",
+      "HadoopJarStep": {
+        "Jar": "s3://eu-west-1.elasticmapreduce/libs/script-runner/script-runner.jar",
+        "Args": ["s3://{bucket}/entrada/staging-to-dwh.sh", "s3://{bucket}/staging", "s3://{bucket}/queries", "staging", "queries", "{env[DATABASE]}"]
+      }
+    },
+    {
+      "Name": "ICMP data migration",
+      "ActionOnFailure": "TERMINATE_CLUSTER",
+      "HadoopJarStep": {
+        "Jar": "s3://eu-west-1.elasticmapreduce/libs/script-runner/script-runner.jar",
+        "Args": ["s3://{bucket}/entrada/staging-to-dwh.sh", "s3://{bucket}/icmpstaging", "s3://{bucket}/icmpqueries", "icmpstaging", "icmpqueries", "{env[DATABASE]}"]
+      }
+    }
+  ]
+}
